@@ -39,9 +39,14 @@ export const store = {
   },
   async init() {
     if (supabase) {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) throw error;
-      this.user = data.session?.user || null;
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        this.user = data.session?.user || null;
+      } catch (err) {
+        console.warn('Gagal membaca sesi Supabase, fallback ke penyimpanan lokal:', err);
+        this.user = null;
+      }
     }
     if (this.user) {
       try {
