@@ -19,6 +19,19 @@ function toast(msg){
   setTimeout(()=>t.classList.remove('show'),2400);
 }
 
+async function parseFunctionError(error, defaultMsg = 'Terjadi kesalahan pada server.') {
+  if (!error) return defaultMsg;
+  try {
+    if (error.context && typeof error.context.json === 'function') {
+      const body = await error.context.json();
+      if (body?.error) return body.error;
+    }
+  } catch (err) {
+    console.warn('Gagal membaca detail error dari server:', err);
+  }
+  return error.message || defaultMsg;
+}
+
 function field(label,key,value='',type='text',full=false,idPrefix=''){
   const id=(idPrefix?`${idPrefix}_`:'f_')+key.replace(/[^a-zA-Z0-9_]/g,'_');
   return `<label class="field ${full?'full':''}" for="${id}">${label}<input id="${id}" name="${esc(key)}" data-bind="${key}" type="${type}" value="${esc(value)}"></label>`;
@@ -349,7 +362,10 @@ function showLicense(){
     }
     try{
       const {data,error}=await supabase.functions.invoke('activate-license',{body:{code:$('#licenseCode').value.trim()}});
-      if(error)throw error;
+      if(error){
+        const msg=await parseFunctionError(error,'Aktivasi gagal.');
+        throw new Error(msg);
+      }
       if(data?.error)throw new Error(data.error);
       m.classList.remove('show');
       toast(data?.message||'Lisensi aktif.');
@@ -367,14 +383,20 @@ function showAdminLicenses(){
   const load=async()=>{
     try{
       const {data,error}=await supabase.functions.invoke('admin-license',{body:{action:'list'}});
-      if(error)throw error;
+      if(error){
+        const msg=await parseFunctionError(error,'Gagal memuat daftar lisensi.');
+        throw new Error(msg);
+      }
       if(data?.error)throw new Error(data.error);
       $('#licenseList').innerHTML=`<h3>Daftar lisensi</h3>${(data.licenses||[]).map(x=>`<div class="entry"><b>${esc(x.status)}</b><div class="muted small">ID: ${esc(x.id)}<br>Dibuat: ${esc(x.created_at||'-')}<br>Aktif: ${esc(x.activated_at||'Belum')}<br>Kedaluwarsa: ${esc(x.expires_at||'Tanpa batas')}</div>${x.status==='unused'||x.status==='active'?`<button class="btn danger" type="button" data-revoke-license="${esc(x.id)}">Cabut lisensi</button>`:''}</div>`).join('')||'<p class="muted small">Belum ada lisensi.</p>'}`;
       $$('[data-revoke-license]').forEach(button=>button.onclick=async()=>{
         if(!confirm('Cabut lisensi ini? Tindakan ini tidak dapat dibatalkan.'))return;
         try{
           const {data,error}=await supabase.functions.invoke('admin-license',{body:{action:'revoke',id:button.dataset.revokeLicense}});
-          if(error)throw error;
+          if(error){
+            const msg=await parseFunctionError(error,'Gagal mencabut lisensi.');
+            throw new Error(msg);
+          }
           if(data?.error)throw new Error(data.error);
           toast('Lisensi dicabut.');
           await load();
@@ -397,7 +419,10 @@ function showAdminLicenses(){
       const days=raw?Number(raw):null;
       if(raw&&(!Number.isInteger(days)||days<1||days>3650))throw new Error('Masa berlaku harus 1–3650 hari.');
       const {data,error}=await supabase.functions.invoke('admin-license',{body:{action:'create',days}});
-      if(error)throw error;
+      if(error){
+        const msg=await parseFunctionError(error,'Gagal membuat lisensi.');
+        throw new Error(msg);
+      }
       if(data?.error)throw new Error(data.error);
       $('#licenseOutput').innerHTML=`<div class="notice"><b>Kode lisensi (salin sekarang):</b><p style="word-break:break-all">${esc(data.code)}</p><button class="btn" id="copyLicense" type="button">Salin kode</button></div>`;
       $('#copyLicense').onclick=()=>navigator.clipboard.writeText(data.code).then(()=>toast('Kode disalin.'));
