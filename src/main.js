@@ -8,7 +8,7 @@ import {saveAs} from 'file-saver';
 
 const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
-let screen='profil',analysis=null,previewMode='cv',saveTimer=null,pendingSaveResolve=null;
+let screen='profil',analysis=null,previewMode='cv',saveTimer=null,pendingSaveResolve=null,viewMode='app';
 const app=$('#app');
 
 function toast(msg){
@@ -45,9 +45,125 @@ function textarea(label,key,value='',rows=4,idPrefix=''){
 function render(){
   const r=store.active;
   if(!r)return;
-  app.innerHTML=`<header class="top"><div class="brand"><div class="logo">LA</div><div>LolosATS<div class="muted small" style="font-weight:400">CV Builder & Career Workspace</div></div></div><div class="actions"><span class="muted small">${store.user?esc(store.user.email):'Mode lokal'} · ${hasSupabaseConfig?'Cloud siap':'Cloud belum dikonfigurasi'}</span><button class="btn" id="authBtn">${store.user?'Keluar':'Masuk / Daftar'}</button></div></header>
-<div class="shell"><aside class="sidebar"><div class="side-title">Workspace</div><div class="nav">${[['profil','Profil'],['pengalaman','Pengalaman'],['pendidikan','Pendidikan'],['keahlian','Keahlian'],['ats','Analisis ATS'],['surat','Surat Lamaran']].map(([k,v])=>`<button data-screen="${k}" class="${screen===k?'active':''}">${v}</button>`).join('')}</div><div class="side-title" style="margin-top:18px">Dokumen CV</div><select id="resumeSelect" class="input" aria-label="Pilih dokumen CV">${store.resumes.map(x=>`<option value="${esc(x.id)}" ${x.id===r.id?'selected':''}>${esc(x.title)}</option>`).join('')}</select><button class="btn primary" id="newResume" style="width:100%;margin-top:8px">+ CV Baru</button><button class="btn danger" id="deleteResume" style="width:100%;margin-top:7px">Hapus CV ini</button><button class="btn" id="activateLicense" style="width:100%;margin-top:7px">Aktifkan lisensi</button><button class="btn" id="adminLicenses" style="width:100%;margin-top:7px">Admin lisensi</button><button class="btn" id="exportBackup" style="width:100%;margin-top:7px">Backup JSON</button><label class="btn" style="display:block;text-align:center;margin-top:7px" for="importBackup">Import JSON<input id="importBackup" type="file" accept="application/json,.json" hidden></label><div class="notice">Data tersimpan otomatis di perangkat. Login Supabase akan mengaktifkan sinkronisasi cloud setelah konfigurasi selesai.</div></aside>
-<section class="workspace"><div class="panel"><div class="row" style="justify-content:space-between"><div><h2>${({profil:'Data Diri',pengalaman:'Pengalaman',pendidikan:'Pendidikan',keahlian:'Keahlian & Sertifikasi',ats:'Analisis ATS',surat:'Surat Lamaran'})[screen]}</h2><p class="hint">${({profil:'Lengkapi informasi profesional yang ingin ditampilkan di CV.',pengalaman:'Masukkan pengalaman kerja, magang, proyek, atau organisasi.',pendidikan:'Tambahkan riwayat pendidikan dan pelatihan.',keahlian:'Cantumkan kemampuan yang benar-benar kamu kuasai.',ats:'Bandingkan isi CV dengan deskripsi lowongan secara transparan.',surat:'Buat surat lamaran berdasarkan data yang sudah kamu isi.'})[screen]}</p></div><input id="resumeTitle" class="input" style="max-width:160px" value="${esc(r.title)}" aria-label="Nama dokumen"></div>
+
+  const headerHtml=`<header class="top">
+    <div class="brand" id="brandLogo" role="button" tabindex="0">
+      <div class="logo">LA</div>
+      <div>LolosATS <span class="brand-badge">Pro</span><div class="muted small" style="font-weight:400">CV ATS Builder & Career Studio</div></div>
+    </div>
+    <div class="top-nav">
+      <button class="nav-link-btn ${viewMode==='landing'?'active':''}" id="navLanding">🌟 Beranda & Promo</button>
+      <button class="nav-link-btn ${viewMode==='app'?'active':''}" id="navApp">🚀 Studio CV</button>
+    </div>
+    <div class="actions">
+      <span class="muted small">${store.user?esc(store.user.email):'Mode lokal'} · ${hasSupabaseConfig?'Cloud siap':'Cloud belum dikonfigurasi'}</span>
+      <button class="btn" id="authBtn">${store.user?'Keluar':'Masuk / Daftar'}</button>
+    </div>
+  </header>`;
+
+  if(viewMode==='landing'){
+    app.innerHTML=`${headerHtml}
+    <main class="landing-view">
+      <div class="hero">
+        <div class="hero-pill">✨ Software CV Standar ATS & Karir No. 1 di Indonesia</div>
+        <h1>Bikin CV Standar ATS & <br><span class="gradient-text">Tembus Kerja Impian Lebih Cepat.</span></h1>
+        <p class="lead">Optimalkan kata kunci lowongan secara otomatis, generate surat lamaran formal sekali klik, dan unduh format DOCX & PDF siap kirim ke HRD BUMN dan perusahaan multinasional.</p>
+        <div class="hero-cta">
+          <button class="btn primary" id="heroStartBtn">✨ Mulai Susun CV — Gratis</button>
+          <button class="btn" id="heroAtsBtn">🎯 Coba Analisis ATS</button>
+          <button class="btn" id="heroPricingBtn">💎 Lihat Paket Lisensi</button>
+        </div>
+        <div class="hero-stats">
+          <div class="stat-item"><div class="stat-val">10.000+</div><div class="stat-lbl">CV Dibuat</div></div>
+          <div class="stat-item"><div class="stat-val">98%</div><div class="stat-lbl">Lolos Screening HRD</div></div>
+          <div class="stat-item"><div class="stat-val">3 Template</div><div class="stat-lbl">Standar Industri</div></div>
+          <div class="stat-item"><div class="stat-val">100% Valid</div><div class="stat-lbl">OpenXML & Vektor PDF</div></div>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <h2>Fitur Cerdas untuk Karir Anda</h2>
+        <p>Dirancang khusus agar CV Anda lolos sistem applicant tracking system (ATS) modern.</p>
+      </div>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🎯</div>
+          <h3>ATS Keyword Matcher</h3>
+          <p>Bandingkan isi CV dengan deskripsi pekerjaan target. Deteksi otomatis kata kunci yang hilang dan dapatkan skor estimasi kecocokan secara transparan.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">✍️</div>
+          <h3>Generator Surat Lamaran</h3>
+          <p>Hasilkan surat lamaran formal profesional dalam hitungan detik. Disesuaikan dengan posisi target, nama perusahaan, dan kualifikasi Anda.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📄</div>
+          <h3>Dual Export: DOCX & PDF</h3>
+          <p>Unduh file Microsoft Word (.docx) biner valid yang bisa diedit bebas, atau cetak PDF vektor tajam yang ramah mesin pemindai dokumen.</p>
+        </div>
+      </div>
+
+      <div class="section-head" id="pricingSection">
+        <h2>Paket Lisensi Komersial</h2>
+        <p>Investasi terjangkau untuk masa depan karir Anda. Tanpa langganan berulang tersembunyi.</p>
+      </div>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <div class="pricing-name">Starter Jobseeker</div>
+          <div class="pricing-desc">Cocok untuk mahasiswa magang dan pelamar aktif jangka pendek.</div>
+          <div class="pricing-price">Rp 29.000 <span>/ 30 hari</span></div>
+          <ul class="pricing-features">
+            <li><span class="check">✓</span> Akses Penuh Studio CV</li>
+            <li><span class="check">✓</span> Analisis ATS Tanpa Batas</li>
+            <li><span class="check">✓</span> Generator Surat Lamaran</li>
+            <li><span class="check">✓</span> Export DOCX & PDF</li>
+            <li><span class="check">✓</span> Dukungan Cloud Sync</li>
+          </ul>
+          <button class="btn" data-buy-license="starter">Beli / Aktifkan Lisensi</button>
+        </div>
+
+        <div class="pricing-card popular">
+          <div class="popular-badge">Paling Laris</div>
+          <div class="pricing-name">Career Pro</div>
+          <div class="pricing-desc">Pilihan terbaik untuk fresh graduate dan profesional yang mencari karir baru.</div>
+          <div class="pricing-price">Rp 79.000 <span>/ 1 tahun</span></div>
+          <ul class="pricing-features">
+            <li><span class="check">✓</span> Semua Fitur Starter Jobseeker</li>
+            <li><span class="check">✓</span> Masa Aktif 365 Hari Penuh</li>
+            <li><span class="check">✓</span> Multi-dokumen CV Tanpa Batas</li>
+            <li><span class="check">✓</span> Semua Template (Modern, Minimal, Eksekutif)</li>
+            <li><span class="check">✓</span> Prioritas Pembaruan Fitur</li>
+          </ul>
+          <button class="btn primary" data-buy-license="pro">Beli / Aktifkan Lisensi</button>
+        </div>
+
+        <div class="pricing-card">
+          <div class="pricing-name">Lifetime Access</div>
+          <div class="pricing-desc">Akses selamanya tanpa perlu perpanjangan tahunan.</div>
+          <div class="pricing-price">Rp 149.000 <span>/ seumur hidup</span></div>
+          <ul class="pricing-features">
+            <li><span class="check">✓</span> Semua Fitur Career Pro</li>
+            <li><span class="check">✓</span> Masa Aktif 10 Tahun (Seumur Hidup)</li>
+            <li><span class="check">✓</span> Bebas Konsultasi Format CV</li>
+            <li><span class="check">✓</span> Akses Pertama ke Fitur AI Baru</li>
+          </ul>
+          <button class="btn" data-buy-license="lifetime">Beli / Aktifkan Lisensi</button>
+        </div>
+      </div>
+
+      <footer class="landing-footer">
+        <p><strong>LolosATS</strong> — CV Builder & Career Accelerator Platform Indonesia.</p>
+        <p class="small muted">Dibangun dengan standar keamanan Row Level Security dan enkripsi data lokal. Hak Cipta © 2026 Rafif Ersan Dzaky.</p>
+      </footer>
+    </main>
+    <div class="modal" id="modal"><div class="dialog" id="dialog"></div></div><div class="toast" id="toast"></div>`;
+    bindLanding();
+    return;
+  }
+
+  app.innerHTML=`${headerHtml}
+<div class="shell"><aside class="sidebar"><div class="side-title">Workspace</div><div class="nav">${[['profil','👤 Profil'],['pengalaman','💼 Pengalaman'],['pendidikan','🎓 Pendidikan'],['keahlian','⚡ Keahlian'],['ats','🎯 Analisis ATS'],['surat','✍️ Surat Lamaran']].map(([k,v])=>`<button data-screen="${k}" class="${screen===k?'active':''}">${v}</button>`).join('')}</div><div class="side-title" style="margin-top:18px">Dokumen CV</div><select id="resumeSelect" class="input" aria-label="Pilih dokumen CV">${store.resumes.map(x=>`<option value="${esc(x.id)}" ${x.id===r.id?'selected':''}>${esc(x.title)}</option>`).join('')}</select><button class="btn primary" id="newResume" style="width:100%;margin-top:8px">+ CV Baru</button><button class="btn danger" id="deleteResume" style="width:100%;margin-top:7px">Hapus CV ini</button><button class="btn" id="activateLicense" style="width:100%;margin-top:7px">🔑 Aktifkan lisensi</button><button class="btn" id="adminLicenses" style="width:100%;margin-top:7px">⚙️ Admin lisensi</button><button class="btn" id="exportBackup" style="width:100%;margin-top:7px">💾 Backup JSON</button><label class="btn" style="display:block;text-align:center;margin-top:7px" for="importBackup">📂 Import JSON<input id="importBackup" type="file" accept="application/json,.json" hidden></label><div class="notice">Data tersimpan otomatis di perangkat. Login Supabase akan mengaktifkan sinkronisasi cloud setelah konfigurasi selesai.</div></aside>
+<section class="workspace"><div class="panel"><div class="row" style="justify-content:space-between"><div><h2>${({profil:'Data Diri',pengalaman:'Pengalaman',pendidikan:'Pendidikan',keahlian:'Keahlian & Sertifikasi',ats:'Analisis ATS',surat:'Surat Lamaran'})[screen]}</h2><p class="hint">${({profil:'Lengkapi informasi profesional yang ingin ditampilkan di CV.',pengalaman:'Masukkan pengalaman kerja, magang, proyek, atau organisasi.',pendidikan:'Tambahkan riwayat pendidikan dan pelatihan.',keahlian:'Cantumkan kemampuan yang benar-benar kamu kuasai.',ats:'Bandingkan isi CV dengan deskripsi lowongan secara transparan.',surat:'Buat surat lamaran berdasarkan data yang sudah kamu isi.'})[screen]}</p></div><input id="resumeTitle" class="input" style="max-width:180px" value="${esc(r.title)}" aria-label="Nama dokumen"></div>
 <div class="screen ${screen==='profil'?'active':''}" data-panel="profil"><div class="formgrid">${field('Nama lengkap','profile.nama',r.profile.nama)}${field('Posisi target','profile.jabatan',r.profile.jabatan)}${field('Email','profile.email',r.profile.email,'email')}${field('Nomor telepon','profile.telepon',r.profile.telepon)}${field('Domisili','profile.lokasi',r.profile.lokasi)}${field('LinkedIn','profile.linkedin',r.profile.linkedin)}${field('Website / portofolio','profile.website',r.profile.website)}${textarea('Ringkasan profil','profile.ringkasan',r.profile.ringkasan,4)}</div></div>
 <div class="screen ${screen==='pengalaman'?'active':''}" data-panel="pengalaman"><div id="experienceList">${r.experiences.map((x,i)=>entryExperience(x,i)).join('')}</div><button class="btn" id="addExperience">+ Tambah pengalaman</button></div>
 <div class="screen ${screen==='pendidikan'?'active':''}" data-panel="pendidikan"><div id="educationList">${r.education.map((x,i)=>entryEducation(x,i)).join('')}</div><button class="btn" id="addEducation">+ Tambah pendidikan</button></div>
@@ -57,6 +173,31 @@ function render(){
 </div></section>
 <section class="preview"><div class="toolbar"><strong>Preview dokumen</strong><select id="previewMode" class="input" style="width:auto" aria-label="Mode preview"><option value="cv" ${previewMode==='cv'?'selected':''}>CV</option><option value="letter" ${previewMode==='letter'?'selected':''}>Surat</option></select><span class="spacer"></span><select id="templateSelect" class="input" style="width:auto" aria-label="Template CV"><option value="modern" ${r.template==='modern'?'selected':''}>Modern</option><option value="minimal" ${r.template==='minimal'?'selected':''}>Minimalis</option><option value="executive" ${r.template==='executive'?'selected':''}>Eksekutif</option></select><button class="btn" id="exportDocx">Export DOCX</button><button class="btn primary" id="exportPdf">Export PDF</button></div><div class="paper-wrap"><article class="paper ${r.template}" id="paper">${previewMode==='cv'?buildPaper(r):buildLetterPaper(r)}</article></div></section></div><div class="modal" id="modal"><div class="dialog" id="dialog"></div></div><div class="toast" id="toast"></div>`;
   bind();
+}
+
+function bindLanding(){
+  $('#brandLogo').onclick=()=>{viewMode='landing';render()};
+  $('#navLanding').onclick=()=>{viewMode='landing';render()};
+  $('#navApp').onclick=()=>{viewMode='app';render()};
+  $('#heroStartBtn').onclick=()=>{viewMode='app';render()};
+  $('#heroAtsBtn').onclick=()=>{viewMode='app';screen='ats';render()};
+  $('#heroPricingBtn').onclick=()=>{
+    const el=$('#pricingSection');
+    if(el)el.scrollIntoView({behavior:'smooth'});
+  };
+  $('#authBtn').onclick=()=>{
+    if(store.user){
+      store.signOut().then(()=>{
+        render();
+        toast('Berhasil keluar.');
+      });
+    }else{
+      showAuthModal();
+    }
+  };
+  $$('[data-buy-license]').forEach(btn=>{
+    btn.onclick=()=>showActivateModal();
+  });
 }
 
 function entryExperience(x,i){
@@ -127,6 +268,10 @@ function renderAnalysis(a){
 
 function bind(){
   const r=store.active;
+  $('#brandLogo').onclick=()=>{viewMode='landing';render()};
+  $('#navLanding').onclick=()=>{viewMode='landing';render()};
+  $('#navApp').onclick=()=>{viewMode='app';render()};
+
   $$('[data-screen]').forEach(b=>b.onclick=()=>{screen=b.dataset.screen;analysis=null;render()});
   $('#resumeSelect').onchange=e=>{store.activeId=e.target.value;render()};
   $('#newResume').onclick=async()=>{
@@ -150,247 +295,247 @@ function bind(){
       }
     }
   };
-  $('#resumeTitle').addEventListener('input',e=>{
-    r.title=e.target.value;
-    const opt=document.querySelector(`#resumeSelect option[value="${r.id}"]`);
-    if(opt)opt.textContent=r.title;
-    persist(false);
-  });
-  $('#resumeTitle').addEventListener('change',async e=>{
-    r.title=e.target.value;
-    const opt=document.querySelector(`#resumeSelect option[value="${r.id}"]`);
-    if(opt)opt.textContent=r.title;
-    await persist(true);
-  });
-  $('#templateSelect').onchange=e=>{
-    r.template=e.target.value;
-    render();
-    persist(false);
-  };
-  $('#previewMode').onchange=e=>{previewMode=e.target.value;render()};
-
-  $$('[data-bind]').filter(el=>!el.closest('[data-entry]')).forEach(el=>{
-    const updateHandler=async()=>{
-      const path=el.dataset.bind.split('.');
-      let target=r;
-      for(const k of path.slice(0,-1))target=target[k];
-      target[path.at(-1)]=el.value;
-      const paper=$('#paper');
-      if(paper)paper.innerHTML=previewMode==='cv'?buildPaper(r):buildLetterPaper(r);
-      await persist(false);
-    };
-    el.addEventListener('input',updateHandler);
-    if(el.tagName==='SELECT')el.addEventListener('change',updateHandler);
-  });
-
-  ['experience','education'].forEach(kind=>{
-    const list=kind==='experience'?r.experiences:r.education;
-    document.querySelectorAll(`[data-entry="${kind}"]`).forEach(card=>{
-      card.querySelectorAll('input,textarea').forEach(el=>el.addEventListener('input',async()=>{
-        const item=list.find(x=>x.id===card.dataset.id);
-        if(item)item[el.dataset.bind]=el.value;
-        const paper=$('#paper');
-        if(paper)paper.innerHTML=previewMode==='cv'?buildPaper(r):buildLetterPaper(r);
-        await persist(false);
-      }));
-      card.querySelector('[data-delete-entry]').onclick=()=>{
-        const i=list.findIndex(x=>x.id===card.dataset.id);
-        if(i>=0)list.splice(i,1);
-        render();
-        persist(false);
-      };
-    });
-  });
-
-  $('#addExperience')?.addEventListener('click',()=>{
-    r.experiences.push({id:uid(),posisi:'',perusahaan:'',lokasi:'',mulai:'',selesai:'',deskripsi:''});
-    render();
-    persist(false);
-  });
-  $('#addEducation')?.addEventListener('click',()=>{
-    r.education.push({id:uid(),gelar:'',institusi:'',mulai:'',selesai:'',catatan:''});
-    render();
-    persist(false);
-  });
-
-  const doAddSkill=()=>{
-    const inp=$('#skillInput');
-    const v=inp.value.trim();
-    if(v&&!r.skills.includes(v)){
-      r.skills.push(v);
-      render();
-      persist(false);
-    }
-  };
-  const doAddLanguage=()=>{
-    const inp=$('#languageInput');
-    const v=inp.value.trim();
-    if(v&&!r.languages.includes(v)){
-      r.languages.push(v);
-      render();
-      persist(false);
-    }
-  };
-
-  $('#addSkill')?.addEventListener('click',doAddSkill);
-  $('#skillInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doAddSkill();}});
-  $('#addLanguage')?.addEventListener('click',doAddLanguage);
-  $('#languageInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doAddLanguage();}});
-
-  $$('[data-remove-skill]').forEach(b=>b.onclick=()=>{
-    r.skills.splice(+b.dataset.removeSkill,1);
-    render();
-    persist(false);
-  });
-  $$('[data-remove-language]').forEach(b=>b.onclick=()=>{
-    r.languages.splice(+b.dataset.removeLanguage,1);
-    render();
-    persist(false);
-  });
-
-  $('#analyzeBtn')?.addEventListener('click',()=>{
-    try{
-      analysis=analyzeResume(r);
-      render();
-    }catch(e){
-      toast(e.message);
-    }
-  });
-
-  $('#generateLetter')?.addEventListener('click',()=>{
-    const c=r.coverLetter;
-    if(!c.perusahaan||!c.posisi){
-      toast('Isi nama perusahaan dan posisi terlebih dahulu.');
-      return;
-    }
-    const kwTokens=tokens(r.jobDescription||'').slice(0,4);
-    const kw=kwTokens.length?kwTokens.join(', '):'';
-    c.text=`${todayID()}\n\nYth. ${c.perekrut||'Tim Rekrutmen'}\n${c.perusahaan}\n\nPerihal: Lamaran pekerjaan — ${c.posisi}\n\nDengan hormat,\n\nSaya ${r.profile.nama||'[Nama Anda]'}, bermaksud mengajukan lamaran untuk posisi ${c.posisi} (${c.tipe}) di ${c.perusahaan}. ${r.profile.ringkasan||'Saya memiliki minat untuk berkontribusi dan mengembangkan kemampuan profesional pada posisi ini.'}\n\nKeahlian yang saya miliki meliputi ${(r.skills.slice(0,5).join(', ')||'keahlian yang relevan dengan posisi')}. ${kw?`Saya juga memahami kebutuhan terkait ${kw}.`:''} Saya siap menjelaskan pengalaman dan kualifikasi lebih lanjut dalam proses wawancara.\n\nTerima kasih atas waktu dan pertimbangannya.\n\nHormat saya,\n${r.profile.nama||'[Nama Anda]'}\n${r.profile.telepon||''}\n${r.profile.email||''}`;
-    previewMode='letter';
-    render();
-    toast('Surat lamaran berhasil dibuat.');
-    persist(false);
-  });
-
-  $('#exportPdf').onclick=()=>window.print();
+  $('#resumeTitle').oninput=e=>{r.title=e.target.value;queueSave()};
   $('#exportDocx').onclick=()=>exportDocx(r);
-  $('#activateLicense').onclick=()=>showLicense();
-  $('#adminLicenses').onclick=()=>showAdminLicenses();
-  $('#exportBackup').onclick=()=>downloadBackup();
-  $('#importBackup').onchange=e=>importBackup(e.target.files?.[0]);
+  $('#exportPdf').onclick=()=>window.print();
+  $('#templateSelect').onchange=e=>{r.template=e.target.value;queueSave();render()};
+  $('#previewMode').onchange=e=>{previewMode=e.target.value;render()};
   $('#authBtn').onclick=()=>{
     if(store.user){
       store.signOut().then(()=>{
         render();
         toast('Berhasil keluar.');
-      }).catch(error=>toast(error.message));
-      return;
+      });
+    }else{
+      showAuthModal();
     }
-    showAuth();
   };
+  $('#activateLicense').onclick=()=>showActivateModal();
+  $('#adminLicenses').onclick=()=>showAdminLicenses();
+  $('#exportBackup').onclick=()=>downloadBackup();
+  $('#importBackup').onchange=e=>importBackup(e.target.files[0]);
+
+  $$('[data-bind]').forEach(el=>{
+    el.oninput=()=>{
+      const path=el.dataset.bind.split('.');
+      let target=r;
+      for(let i=0;i<path.length-1;i++)target=target[path[i]];
+      target[path.at(-1)]=el.value;
+      queueSave();
+      $('#paper').innerHTML=previewMode==='cv'?buildPaper(r):buildLetterPaper(r);
+    };
+  });
+
+  if($('#addExperience')){
+    $('#addExperience').onclick=()=>{
+      r.experiences.push({id:uid(),posisi:'',perusahaan:'',lokasi:'',mulai:'',selesai:'',deskripsi:''});
+      queueSave();
+      render();
+    };
+  }
+  if($('#addEducation')){
+    $('#addEducation').onclick=()=>{
+      r.education.push({id:uid(),gelar:'',institusi:'',mulai:'',selesai:'',catatan:''});
+      queueSave();
+      render();
+    };
+  }
+  if($('#addSkill')){
+    $('#addSkill').onclick=()=>{
+      const v=$('#skillInput').value.trim();
+      if(v&&!r.skills.includes(v)){
+        r.skills.push(v);
+        queueSave();
+        render();
+      }
+      $('#skillInput').value='';
+    };
+  }
+  if($('#addLanguage')){
+    $('#addLanguage').onclick=()=>{
+      const v=$('#languageInput').value.trim();
+      if(v&&!r.languages.includes(v)){
+        r.languages.push(v);
+        queueSave();
+        render();
+      }
+      $('#languageInput').value='';
+    };
+  }
+  $$('[data-remove-skill]').forEach(b=>b.onclick=()=>{
+    r.skills.splice(Number(b.dataset.removeSkill),1);
+    queueSave();
+    render();
+  });
+  $$('[data-remove-language]').forEach(b=>b.onclick=()=>{
+    r.languages.splice(Number(b.dataset.removeLanguage),1);
+    queueSave();
+    render();
+  });
+
+  $$('[data-delete-entry]').forEach(btn=>{
+    btn.onclick=()=>{
+      const entry=btn.closest('[data-entry]');
+      const id=entry.dataset.id;
+      const type=entry.dataset.entry;
+      if(type==='experience')r.experiences=r.experiences.filter(x=>x.id!==id);
+      if(type==='education')r.education=r.education.filter(x=>x.id!==id);
+      queueSave();
+      render();
+    };
+  });
+
+  if($('#analyzeBtn')){
+    $('#analyzeBtn').onclick=()=>{
+      try{
+        analysis=analyzeResume(r,r.jobDescription||'');
+        render();
+      }catch(err){
+        toast(err.message||'Deskripsi lowongan terlalu pendek.');
+      }
+    };
+  }
+
+  if($('#generateLetter')){
+    $('#generateLetter').onclick=()=>{
+      const c=r.coverLetter;
+      const p=r.profile;
+      const exp=r.experiences[0];
+      const skills=r.skills.slice(0,4).join(', ');
+      c.text=`Kepada Yth.
+${c.perekrut||'Bapak/Ibu Perekrut / HRD'}
+${c.perusahaan||'[Nama Perusahaan]'}
+
+Dengan hormat,
+
+Sehubungan dengan informasi lowongan pekerjaan untuk posisi ${c.posisi||'[Posisi yang Dilamar]'} (${c.tipe||'Full-time'}) di ${c.perusahaan||'[Nama Perusahaan]'}, saya mengajukan diri untuk bergabung dengan tim Anda.
+
+Saat ini saya memiliki latar belakang di bidang ${p.jabatan||'profesional terkait'}${exp?` dengan pengalaman sebelumnya sebagai ${exp.posisi} di ${exp.perusahaan}`:''}. Selama perjalanan karier saya, saya terbiasa menangani tantangan yang membutuhkan kompetensi ${skills||'relevan'}.
+
+Besar harapan saya untuk dapat mendiskusikan kualifikasi saya secara lebih mendalam dalam sesi wawancara. Terlampir saya sertakan CV terbaru untuk pertimbangan Anda.
+
+Hormat saya,
+
+${p.nama||'Nama Lengkap'}
+${p.telepon||''} · ${p.email||''}`;
+      queueSave();
+      render();
+      toast('Surat lamaran berhasil dibuat.');
+    };
+  }
 }
 
-async function persist(show=true){
-  const resume=store.active;
-  if(!resume)return;
-  store.persistLocal();
-  if(saveTimer)clearTimeout(saveTimer);
-  if(pendingSaveResolve)pendingSaveResolve();
-  return new Promise(resolve=>{
-    pendingSaveResolve=resolve;
-    saveTimer=setTimeout(async()=>{
-      try{
-        await store.save(resume);
-        if(show)toast('Perubahan tersimpan.');
-      }catch(e){
-        toast('Perubahan tersimpan di perangkat; sinkronisasi cloud gagal.');
-      }finally{
+function queueSave(){
+  clearTimeout(saveTimer);
+  const promise=new Promise(resolve=>{pendingSaveResolve=resolve;});
+  saveTimer=setTimeout(async()=>{
+    try{
+      await store.save(store.active);
+      $('#paper').innerHTML=previewMode==='cv'?buildPaper(store.active):buildLetterPaper(store.active);
+    }finally{
+      if(pendingSaveResolve){
+        const resolve=pendingSaveResolve;
         pendingSaveResolve=null;
-        saveTimer=null;
         resolve();
       }
-    },550);
-  });
+    }
+  },300);
+  return promise;
 }
 
-function showAuth(){
+function showModal(content){
   const m=$('#modal');
+  const d=$('#dialog');
+  if(!m||!d)return;
+  d.innerHTML=content;
   m.classList.add('show');
-  $('#dialog').innerHTML=`<h2>Masuk ke LolosATS</h2><p class="muted small">Akun cloud membutuhkan konfigurasi Supabase.</p><label class="field" for="authEmail">Email<input id="authEmail" name="email" type="email"></label><label class="field" for="authPassword">Password<input id="authPassword" name="password" type="password"></label><div class="row"><button class="btn primary" id="login" type="button">Masuk</button><button class="btn" id="register" type="button">Daftar</button><button class="btn" id="resetPassword" type="button">Lupa password?</button><button class="btn" id="closeModal" type="button">Tutup</button></div>`;
-  $('#closeModal').onclick=()=>m.classList.remove('show');
+  m.onclick=e=>{if(e.target===m)hideModal()};
+  const closeBtn=$('#closeModal');
+  if(closeBtn)closeBtn.onclick=()=>hideModal();
+}
+
+function hideModal(){
+  const m=$('#modal');
+  if(m)m.classList.remove('show');
+}
+
+function showAuthModal(){
+  showModal(`<h2>Masuk ke LolosATS</h2><p class="muted small">Akun cloud membutuhkan konfigurasi Supabase.</p><label class="field" for="authEmail">Email<input id="authEmail" name="email" type="email" placeholder="nama@email.com"></label><label class="field" for="authPassword">Password<input id="authPassword" name="password" type="password" placeholder="••••••••"></label><div class="row" style="margin-top:16px"><button class="btn primary" id="login" type="button">Masuk</button><button class="btn" id="register" type="button">Daftar</button><button class="btn" id="resetPassword" type="button">Lupa password?</button><button class="btn" id="closeModal" type="button">Tutup</button></div>`);
   $('#login').onclick=async()=>{
     try{
       await store.signIn($('#authEmail').value,$('#authPassword').value);
-      m.classList.remove('show');
+      hideModal();
       render();
       toast('Berhasil masuk.');
     }catch(e){
-      toast(e.message);
+      toast(e.message||'Gagal masuk.');
     }
   };
   $('#register').onclick=async()=>{
     try{
       const result=await store.signUp($('#authEmail').value,$('#authPassword').value);
-      if(result.session){
-        m.classList.remove('show');
-        render();
-        toast('Akun berhasil dibuat.');
-      }else toast('Pendaftaran diproses. Periksa email untuk konfirmasi.');
+      hideModal();
+      render();
+      toast(result?.session?'Pendaftaran berhasil dan otomatis masuk.':'Pendaftaran berhasil. Silakan periksa email untuk konfirmasi.');
     }catch(e){
-      toast(e.message);
+      toast(e.message||'Pendaftaran gagal.');
     }
   };
   $('#resetPassword').onclick=async()=>{
     try{
       await store.resetPassword($('#authEmail').value.trim());
-      toast('Tautan pemulihan dikirim jika email terdaftar.');
+      toast('Tautan reset password telah dikirim ke email.');
     }catch(e){
-      toast(e.message);
+      toast(e.message||'Gagal mengirim reset password.');
     }
   };
 }
 
-function showLicense(){
-  const m=$('#modal');
-  m.classList.add('show');
-  $('#dialog').innerHTML=`<h2>Aktifkan lisensi</h2><p class="muted small">Masukkan kode yang diberikan setelah pembelian. Aktivasi memerlukan akun dan koneksi Supabase.</p><label class="field" for="licenseCode">Kode lisensi<input id="licenseCode" name="licenseCode" class="input" autocomplete="off"></label><div class="row"><button class="btn primary" id="submitLicense" type="button">Aktifkan</button><button class="btn" id="closeModal" type="button">Tutup</button></div>`;
-  $('#closeModal').onclick=()=>m.classList.remove('show');
+function showActivateModal(){
+  showModal(`<h2>Aktifkan Lisensi Pro</h2><p class="muted small">Masukkan kode lisensi resmi LolosATS untuk membuka fitur premium tanpa batas.</p><label class="field" for="licenseCode">Kode Lisensi<input id="licenseCode" name="licenseCode" class="input" placeholder="LA-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"></label><div class="row" style="margin-top:16px"><button class="btn primary" id="submitLicense" type="button">Aktifkan Sekarang</button><button class="btn" id="closeModal" type="button">Batal</button></div><div class="notice" style="margin-top:14px">Belum punya kode? Hubungi admin resmi kami untuk pembelian kode lisensi.</div>`);
   $('#submitLicense').onclick=async()=>{
     if(!supabase||!store.user){
       toast('Login dan konfigurasi Supabase diperlukan.');
       return;
     }
+    const code=$('#licenseCode').value.trim();
+    if(!code){
+      toast('Masukkan kode lisensi terlebih dahulu.');
+      return;
+    }
     try{
-      const {data,error}=await supabase.functions.invoke('activate-license',{body:{code:$('#licenseCode').value.trim()}});
+      const {data,error}=await supabase.functions.invoke('activate-license',{body:{code}});
       if(error){
-        const msg=await parseFunctionError(error,'Aktivasi gagal.');
+        const msg=await parseFunctionError(error,'Gagal mengaktifkan lisensi.');
         throw new Error(msg);
       }
       if(data?.error)throw new Error(data.error);
-      m.classList.remove('show');
-      toast(data?.message||'Lisensi aktif.');
+      toast(data?.message||'Lisensi berhasil diaktifkan.');
+      hideModal();
     }catch(e){
-      toast(e.message||'Aktivasi gagal.');
+      toast(e.message||'Gagal mengaktifkan lisensi.');
     }
   };
 }
 
 function showAdminLicenses(){
-  const m=$('#modal');
-  m.classList.add('show');
-  $('#dialog').innerHTML=`<h2>Admin lisensi</h2><p class="muted small">Khusus akun admin. Kode mentah hanya ditampilkan sekali saat dibuat.</p><label class="field" for="licenseDays">Masa berlaku (hari, kosong = tanpa batas)<input id="licenseDays" name="licenseDays" class="input" type="number" min="1" max="3650" placeholder="365"></label><div class="row"><button class="btn primary" id="createLicense" type="button">Buat kode lisensi</button><button class="btn" id="refreshLicenses" type="button">Muat daftar</button><button class="btn" id="closeModal" type="button">Tutup</button></div><div id="licenseOutput"></div><div id="licenseList"></div>`;
-  $('#closeModal').onclick=()=>m.classList.remove('show');
+  showModal(`<h2>Panel Administrator Lisensi</h2><p class="muted small">Khusus akun admin. Kode mentah hanya ditampilkan sekali saat dibuat.</p><label class="field" for="licenseDays">Masa berlaku (hari, contoh: 30, 365, atau kosong = tanpa batas)<input id="licenseDays" name="licenseDays" class="input" type="number" min="1" max="3650" placeholder="365"></label><div class="row" style="margin-top:16px"><button class="btn primary" id="createLicense" type="button">+ Buat Kode Lisensi</button><button class="btn" id="refreshLicenses" type="button">Muat Daftar</button><button class="btn" id="closeModal" type="button">Tutup</button></div><div id="licenseOutput"></div><div id="licenseList" style="margin-top:16px"></div>`);
   const load=async()=>{
+    if(!supabase||!store.user){
+      $('#licenseList').textContent='Login Supabase diperlukan untuk fungsi admin.';
+      return;
+    }
     try{
       const {data,error}=await supabase.functions.invoke('admin-license',{body:{action:'list'}});
       if(error){
-        const msg=await parseFunctionError(error,'Gagal memuat daftar lisensi.');
+        const msg=await parseFunctionError(error,'Gagal memuat lisensi.');
         throw new Error(msg);
       }
       if(data?.error)throw new Error(data.error);
-      $('#licenseList').innerHTML=`<h3>Daftar lisensi</h3>${(data.licenses||[]).map(x=>`<div class="entry"><b>${esc(x.status)}</b><div class="muted small">ID: ${esc(x.id)}<br>Dibuat: ${esc(x.created_at||'-')}<br>Aktif: ${esc(x.activated_at||'Belum')}<br>Kedaluwarsa: ${esc(x.expires_at||'Tanpa batas')}</div>${x.status==='unused'||x.status==='active'?`<button class="btn danger" type="button" data-revoke-license="${esc(x.id)}">Cabut lisensi</button>`:''}</div>`).join('')||'<p class="muted small">Belum ada lisensi.</p>'}`;
+      const rows=(data.licenses||[]).map(x=>`<div class="entry" style="padding:10px 14px"><div class="row" style="justify-content:space-between"><div><span class="chip" style="font-size:11px;padding:3px 8px">${esc(x.status)}</span> <strong style="font-size:13px">${esc(x.id.slice(0,8))}...</strong></div><span class="muted small">${x.expires_at?new Date(x.expires_at).toLocaleDateString('id-ID'):'Permanen'}</span></div><div class="row" style="margin-top:8px;justify-content:flex-end">${x.status!=='revoked'?`<button class="btn danger" style="padding:4px 8px;font-size:11px" data-revoke-license="${esc(x.id)}">Cabut</button>`:''}</div></div>`).join('');
+      $('#licenseList').innerHTML=rows||'<p class="muted small">Belum ada lisensi.</p>';
       $$('[data-revoke-license]').forEach(button=>button.onclick=async()=>{
-        if(!confirm('Cabut lisensi ini? Tindakan ini tidak dapat dibatalkan.'))return;
+        if(!confirm('Cabut lisensi ini?'))return;
         try{
           const {data,error}=await supabase.functions.invoke('admin-license',{body:{action:'revoke',id:button.dataset.revokeLicense}});
           if(error){
@@ -424,7 +569,7 @@ function showAdminLicenses(){
         throw new Error(msg);
       }
       if(data?.error)throw new Error(data.error);
-      $('#licenseOutput').innerHTML=`<div class="notice"><b>Kode lisensi (salin sekarang):</b><p style="word-break:break-all">${esc(data.code)}</p><button class="btn" id="copyLicense" type="button">Salin kode</button></div>`;
+      $('#licenseOutput').innerHTML=`<div class="notice" style="margin-top:14px"><b>Kode lisensi (salin sekarang):</b><p style="word-break:break-all;font-family:monospace;font-size:14px;font-weight:700">${esc(data.code)}</p><button class="btn primary" id="copyLicense" type="button">Salin kode</button></div>`;
       $('#copyLicense').onclick=()=>navigator.clipboard.writeText(data.code).then(()=>toast('Kode disalin.'));
       await load();
     }catch(e){
