@@ -3,3 +3,5 @@ dist
 .env
 .env.local
 .DS_Store
+LICENSE_INVENTORY.json
+*.local.json
